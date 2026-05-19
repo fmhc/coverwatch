@@ -1,0 +1,20 @@
+# deps & build
+node_modules/
+dist/
+*.tsbuildinfo
+
+# scraped cover cache — regenerate with `npm run fetch-covers`
+assets/covers/
+
+# local dev / debug artifacts
+.playwright-mcp/
+shot*.png
+feedback*.png
+*.bak
+*.bak.*
+.DS_Store
+*.log
+
+# editor
+.vscode/
+.idea/
