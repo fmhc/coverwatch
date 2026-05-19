@@ -9,20 +9,20 @@ const METAL = new THREE.MeshStandardMaterial({
   roughness: 0.45,
   metalness: 0.75,
 });
-const TILT = -0.34; // slight lean-back, same skew for every copy incl. hero
+const TILT = -0.3; // slight lean-back, same skew for every copy incl. hero
 // Real kiosk racks are STAIRCASED: each higher row sits higher AND further
-// back, so the row in front only hides the thin bottom edge of the row behind
-// — you see (almost) the whole of every magazine.
-const ROWS = 5;
+// back. ROW_H must clear a FULL magazine + the next shelf board, otherwise the
+// upper shelf/rail cuts across the tops of the row below (the reported bug).
+const ROWS = 4;
 const COLS = 10;
 const MAG_H = 0.86;
-const ROW_H = 0.74; // ≈ MAG_H → rows step up by ~a full magazine
+const ROW_H = 0.98; // > MAG_H + shelf → every magazine fully clears the next shelf
 const ROW_DZ = 0.36; // each higher row well behind the one in front
 const COL_DX = 0.56; // covers touch / slightly overlap side to side
 const COL_X0 = -((COLS - 1) * COL_DX) / 2;
 const BASE_Y = 0.3;
 const SHELF_Z = -0.3;
-const HERO_ROW = 2;
+const HERO_ROW = 1;
 const HERO_COL = 5;
 const zRow = (r: number) => SHELF_Z - r * ROW_DZ;
 const BACK_Z = SHELF_Z - (ROWS - 1) * ROW_DZ - 0.5;

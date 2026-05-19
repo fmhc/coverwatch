@@ -38,13 +38,13 @@ const PRESETS_BY_SCENE: Record<SceneId, Preset[]> = {
     { name: "Raking light", pos: [-1.95, 0.72, 1.5], tgt: [0, 0.55, 0.2] },
   ],
   rack: [
-    { name: "Hero", pos: [0, 1.5, 4.7], tgt: [0, 1.4, 0] },
-    { name: "3/4 left", pos: [-2.4, 1.6, 4.2], tgt: [0, 1.4, 0] },
-    { name: "3/4 right", pos: [2.45, 1.6, 4.1], tgt: [0, 1.4, 0] },
-    { name: "Browsing", pos: [0.4, 2.2, 5.4], tgt: [0, 1.65, 0] },
-    { name: "Macro finish", pos: [0.2, 1.45, 2.0], tgt: [0, 1.44, 0.1] },
-    { name: "Low look-up", pos: [0, 0.7, 4.4], tgt: [0, 1.85, 0] },
-    { name: "Raking light", pos: [-2.6, 1.45, 3.0], tgt: [0, 1.4, 0] },
+    { name: "Hero", pos: [0, 1.5, 5.6], tgt: [0, 1.95, -0.85] },
+    { name: "3/4 left", pos: [-3.0, 1.7, 5.0], tgt: [0, 1.95, -0.85] },
+    { name: "3/4 right", pos: [3.05, 1.7, 4.9], tgt: [0, 1.95, -0.85] },
+    { name: "Browsing", pos: [0.4, 3.1, 5.4], tgt: [0, 1.7, -1.0] },
+    { name: "Macro finish", pos: [0.3, 1.4, 2.2], tgt: [0.28, 1.28, -0.6] },
+    { name: "Low look-up", pos: [0, 0.6, 5.0], tgt: [0, 2.4, -0.9] },
+    { name: "Raking light", pos: [-3.3, 1.7, 3.6], tgt: [0, 1.9, -0.85] },
   ],
 };
 
