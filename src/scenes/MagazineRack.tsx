@@ -4,12 +4,6 @@ import { ContactShadows, MeshReflectorMaterial } from "@react-three/drei";
 import { useScrapedTextures } from "../covers/useScrapedTextures";
 import { useStore } from "../store";
 
-const HERO_ROW = 1;
-const HERO_COL = 4;
-// Each higher row recedes in Z so the vertically-overlapping (shingled) rows
-// never intersect — that was the "3D-Objekte schneiden sich" bug.
-const zRow = (r: number) => SHELF_Z - r * 0.13;
-
 const METAL = new THREE.MeshStandardMaterial({
   color: "#3a3f45",
   roughness: 0.45,
@@ -17,10 +11,16 @@ const METAL = new THREE.MeshStandardMaterial({
 });
 const TILT = -0.3;
 const ROWS = 5;
-const ROW_H = 0.6;
+const ROW_H = 0.66; // > MAG_H means a gentle shingle, not a heavy overlap
 const BASE_Y = 0.2;
 const SHELF_Z = -0.45;
 const MAG_H = 0.78;
+const HERO_ROW = 2; // middle row → highlighted copy sits near eye-centre
+const HERO_COL = 4;
+// Higher rows recede only slightly so the shingle reads but they never fall
+// behind the back panel (that hid the top rows entirely before).
+const zRow = (r: number) => SHELF_Z - r * 0.05;
+const BACK_Z = SHELF_Z - 0.55; // opaque panel, safely behind the deepest row
 
 function headerTexture() {
   const c = document.createElement("canvas");
@@ -86,20 +86,26 @@ export default function MagazineRack({ children }: { children: ReactNode }) {
         />
       </mesh>
 
-      {/* gondola back panel */}
-      <mesh position={[0, 1.5, SHELF_Z - 0.32]} receiveShadow>
-        <planeGeometry args={[6.4, 4.2]} />
+      {/* gondola back panel — safely behind every row */}
+      <mesh position={[0, 1.75, BACK_Z]} receiveShadow>
+        <planeGeometry args={[6.4, 4.6]} />
         <meshStandardMaterial color={"#1a1d22"} roughness={0.9} />
       </mesh>
       {/* metal side uprights */}
       {[-2.85, 2.85].map((x, i) => (
-        <mesh key={i} position={[x, 1.4, SHELF_Z - 0.1]} material={METAL}>
-          <boxGeometry args={[0.07, 3.6, 0.5]} />
+        <mesh key={i} position={[x, 1.75, SHELF_Z - 0.18]} material={METAL}>
+          <boxGeometry args={[0.07, 4.0, 0.5]} />
         </mesh>
       ))}
 
-      {/* header */}
-      <mesh position={[0, BASE_Y + ROWS * ROW_H - 0.05, SHELF_Z - 0.05]}>
+      {/* header — sits clearly ABOVE the top row (no longer clips it) */}
+      <mesh
+        position={[
+          0,
+          BASE_Y + (ROWS - 1) * ROW_H + MAG_H / 2 + 0.24,
+          zRow(ROWS - 1) - 0.03,
+        ]}
+      >
         <boxGeometry args={[5.7, 0.34, 0.04]} />
         <meshStandardMaterial map={useMemo(headerTexture, [])} toneMapped={false} />
       </mesh>

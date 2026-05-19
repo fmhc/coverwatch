@@ -38,13 +38,13 @@ const PRESETS_BY_SCENE: Record<SceneId, Preset[]> = {
     { name: "Raking light", pos: [-1.95, 0.72, 1.5], tgt: [0, 0.55, 0.2] },
   ],
   rack: [
-    { name: "Hero", pos: [0, 1.05, 3.05], tgt: [0, 0.95, 0] },
-    { name: "3/4 left", pos: [-2.0, 1.1, 2.8], tgt: [0, 0.95, 0] },
-    { name: "3/4 right", pos: [2.05, 1.12, 2.75], tgt: [0, 0.95, 0] },
-    { name: "Browsing", pos: [0.4, 1.7, 3.95], tgt: [0, 1.45, 0] },
-    { name: "Macro finish", pos: [0.2, 0.95, 1.75], tgt: [0, 0.95, 0.1] },
-    { name: "Low look-up", pos: [0, 0.45, 2.7], tgt: [0, 1.15, 0] },
-    { name: "Raking light", pos: [-2.05, 0.95, 2.0], tgt: [0, 0.95, 0] },
+    { name: "Hero", pos: [0, 1.8, 5.6], tgt: [0, 1.7, 0] },
+    { name: "3/4 left", pos: [-2.9, 1.9, 4.9], tgt: [0, 1.7, 0] },
+    { name: "3/4 right", pos: [2.95, 1.9, 4.8], tgt: [0, 1.7, 0] },
+    { name: "Browsing", pos: [0.5, 2.6, 6.0], tgt: [0, 1.9, 0] },
+    { name: "Macro finish", pos: [0.25, 1.55, 2.4], tgt: [0, 1.52, 0.1] },
+    { name: "Low look-up", pos: [0, 0.9, 4.9], tgt: [0, 2.0, 0] },
+    { name: "Raking light", pos: [-3.0, 1.7, 3.4], tgt: [0, 1.7, 0] },
   ],
 };
 
@@ -53,6 +53,16 @@ const PRESETS = PRESETS_BY_SCENE.bookshop;
 
 const MIN_DIST = 0.65;
 const MAX_DIST = 9;
+// The point the camera looks at / orbits around, vertically. Raising this is a
+// pedestal move (target AND camera shift by the same dY) so the framing pans
+// up the scene without changing angle or distance — needed to bring the whole
+// tall kiosk rack into the shot.
+const FOCUS_MIN = 0;
+const FOCUS_MAX = 3.2;
+
+// /api/realism is a dev-only Vite middleware (shells out to Codex). On the
+// built/static deploy it doesn't exist, so the AI button is hidden there.
+const AI_AVAILABLE = import.meta.env.DEV;
 
 type Ctl = {
   target: THREE.Vector3;
@@ -64,7 +74,13 @@ type Ctl = {
 
 /** Flies to a preset on change, then RELEASES control to OrbitControls so the
  *  user can freely orbit/zoom. Any manual interaction cancels the flight. */
-function CameraRig({ onDist }: { onDist: (d: number) => void }) {
+function CameraRig({
+  onDist,
+  onFocusY,
+}: {
+  onDist: (d: number) => void;
+  onFocusY: (y: number) => void;
+}) {
   const preset = useStore((s) => s.cameraPreset);
   const scene = useStore((s) => s.scene);
   const nonce = useStore((s) => s.viewNonce);
@@ -102,6 +118,7 @@ function CameraRig({ onDist }: { onDist: (d: number) => void }) {
     }
     if (controls && ++tick.current % 6 === 0) {
       onDist(cam.position.distanceTo(controls.target));
+      onFocusY(controls.target.y);
     }
   });
   return null;
@@ -110,6 +127,8 @@ function CameraRig({ onDist }: { onDist: (d: number) => void }) {
 export type ZoomApi = {
   zoomBy: (mult: number) => void;
   setDist: (d: number) => void;
+  /** Pedestal: move the orbit focus (and camera) to this world Y. */
+  setFocusY: (y: number) => void;
 };
 
 function ZoomController({ apiRef }: { apiRef: React.MutableRefObject<ZoomApi | null> }) {
@@ -127,6 +146,13 @@ function ZoomController({ apiRef }: { apiRef: React.MutableRefObject<ZoomApi | n
       zoomBy: (mult) =>
         dolly(cam.position.distanceTo(controls.target) * mult),
       setDist: (dist) => dolly(dist),
+      setFocusY: (y) => {
+        const ny = THREE.MathUtils.clamp(y, FOCUS_MIN, FOCUS_MAX);
+        const dy = ny - controls.target.y;
+        controls.target.y = ny;
+        cam.position.y += dy;
+        controls.update();
+      },
     };
   }, [controls, cam, apiRef]);
   return null;
@@ -252,6 +278,7 @@ export default function App() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<ProductKind>("book");
   const [dist, setDist] = useState(2.2);
+  const [focusY, setFocusYState] = useState(0.6);
   const scenePresets = PRESETS_BY_SCENE[s.scene];
   const visibleCovers = s.covers.filter((c) => c.kind === tab).slice(0, 160);
 
@@ -326,7 +353,7 @@ export default function App() {
           maxDistance={MAX_DIST}
           maxPolarAngle={Math.PI / 1.9}
         />
-        <CameraRig onDist={setDist} />
+        <CameraRig onDist={setDist} onFocusY={setFocusYState} />
         <ZoomController apiRef={zoomRef} />
         <ExposureSync />
         <Capture captureRef={captureRef} />
@@ -377,17 +404,21 @@ export default function App() {
         >
           ⟳ Spin
         </button>
-        <button
-          onClick={runRealism}
-          disabled={s.aiBusy}
-          className={`chip px-4 py-2 rounded-xl text-xs font-bold ${
-            s.aiBusy
-              ? "glass text-white/50"
-              : "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white"
-          }`}
-        >
-          {s.aiBusy ? "✦ analysiert …" : "✦ AI-Realismus"}
-        </button>
+        {/* AI realism needs the dev-only /api/realism (Codex) — hide it on
+            the public static demo where that endpoint doesn't exist */}
+        {AI_AVAILABLE && (
+          <button
+            onClick={runRealism}
+            disabled={s.aiBusy}
+            className={`chip px-4 py-2 rounded-xl text-xs font-bold ${
+              s.aiBusy
+                ? "glass text-white/50"
+                : "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white"
+            }`}
+          >
+            {s.aiBusy ? "✦ analysiert …" : "✦ AI-Realismus"}
+          </button>
+        )}
         <button
           onClick={() => captureRef.current?.save()}
           className="chip px-4 py-2 rounded-xl text-xs font-bold bg-white text-ink"
@@ -494,6 +525,46 @@ export default function App() {
             >
               ⟲ Reset view
             </button>
+          </Section>
+
+          <Section title={`FOCUS HEIGHT · ${focusY.toFixed(2)}m`}>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const y = Math.max(FOCUS_MIN, focusY - 0.15);
+                  setFocusYState(y);
+                  zoomRef.current?.setFocusY(y);
+                }}
+                title="lower the point the camera looks at"
+                className="chip glass w-8 h-8 rounded-lg text-base font-bold"
+              >
+                ↓
+              </button>
+              <input
+                type="range"
+                min={FOCUS_MIN}
+                max={FOCUS_MAX}
+                step={0.02}
+                value={focusY}
+                onChange={(e) => {
+                  const y = parseFloat(e.target.value);
+                  setFocusYState(y);
+                  zoomRef.current?.setFocusY(y);
+                }}
+                className="accent-white flex-1"
+              />
+              <button
+                onClick={() => {
+                  const y = Math.min(FOCUS_MAX, focusY + 0.15);
+                  setFocusYState(y);
+                  zoomRef.current?.setFocusY(y);
+                }}
+                title="raise the point the camera looks at"
+                className="chip glass w-8 h-8 rounded-lg text-base font-bold"
+              >
+                ↑
+              </button>
+            </div>
           </Section>
 
           <Section title="STUDIO GLAM">
