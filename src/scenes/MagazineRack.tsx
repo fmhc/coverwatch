@@ -9,32 +9,48 @@ const METAL = new THREE.MeshStandardMaterial({
   roughness: 0.45,
   metalness: 0.75,
 });
-const TILT = -0.3;
-const ROWS = 5;
-const ROW_H = 0.66; // > MAG_H means a gentle shingle, not a heavy overlap
-const BASE_Y = 0.2;
+const TILT = -0.36; // steeper lean-back, like a real slanted kiosk shelf
+// A real kiosk wall is PACKED: big covers, heavy shingle (you see only the
+// top ~half of most copies), tight columns, almost no shelf showing.
+const ROWS = 6;
+const COLS = 11;
+const ROW_H = 0.42; // << MAG_H → strong vertical overlap
+const COL_DX = 0.42; // < cover width → columns overlap sideways too
+const COL_X0 = -((COLS - 1) * 0.42) / 2;
+const BASE_Y = 0.18;
 const SHELF_Z = -0.45;
-const MAG_H = 0.78;
-const HERO_ROW = 2; // middle row → highlighted copy sits near eye-centre
-const HERO_COL = 4;
-// Higher rows recede only slightly so the shingle reads but they never fall
-// behind the back panel (that hid the top rows entirely before).
-const zRow = (r: number) => SHELF_Z - r * 0.05;
-const BACK_Z = SHELF_Z - 0.55; // opaque panel, safely behind the deepest row
+const MAG_H = 0.86;
+const HERO_ROW = 3; // middle-ish → highlighted copy near eye-centre
+const HERO_COL = 5;
+// Each higher row sits a bit further back so the heavy shingle reads as
+// overlap (front row on top) and never z-fights.
+const zRow = (r: number) => SHELF_Z - r * 0.06;
+const BACK_Z = SHELF_Z - 0.7; // opaque panel, safely behind the deepest row
 
 function headerTexture() {
+  // Canvas aspect matches the header box (5.7 × 0.34 ≈ 16.8:1) so the text
+  // isn't stretched, and the font auto-shrinks to never overflow.
+  const W = 1680;
+  const H = 100;
   const c = document.createElement("canvas");
-  c.width = 1024;
-  c.height = 160;
+  c.width = W;
+  c.height = H;
   const x = c.getContext("2d")!;
   x.fillStyle = "#0f3d6b";
-  x.fillRect(0, 0, 1024, 160);
+  x.fillRect(0, 0, W, H);
   x.fillStyle = "#ffd23f";
-  x.fillRect(0, 132, 1024, 12);
+  x.fillRect(0, H - 9, W, 9);
+  const label = "ZEITSCHRIFTEN";
+  let fs = 58;
+  x.font = `800 ${fs}px Inter, sans-serif`;
+  while (x.measureText(label).width > W * 0.82 && fs > 20) {
+    fs -= 2;
+    x.font = `800 ${fs}px Inter, sans-serif`;
+  }
   x.fillStyle = "#fff";
   x.textAlign = "center";
-  x.font = "800 86px Inter, sans-serif";
-  x.fillText("ZEITSCHRIFTEN  ·  MAGAZINES", 512, 100);
+  x.textBaseline = "middle";
+  x.fillText(label, W / 2, H / 2 - 3);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
@@ -48,23 +64,20 @@ function headerTexture() {
  * lifts the reviewed copy off the busy wall. Tiled, reflective station floor.
  */
 export default function MagazineRack({ children }: { children: ReactNode }) {
-  const bg = useScrapedTextures("magazine", 44);
+  const bg = useScrapedTextures("magazine", ROWS * COLS);
   const placement = useStore((s) => s.placement);
 
   const rows = useMemo(
     () =>
-      Array.from({ length: ROWS }).map((_, r) => {
-        const cols = 8;
-        return {
-          r,
-          y: BASE_Y + r * ROW_H,
-          cols: Array.from({ length: cols }).map((_, k) => ({
-            x: -2.45 + k * 0.62,
-            isHero: r === HERO_ROW && k === HERO_COL,
-            ci: r * cols + k,
-          })),
-        };
-      }),
+      Array.from({ length: ROWS }).map((_, r) => ({
+        r,
+        y: BASE_Y + r * ROW_H,
+        cols: Array.from({ length: COLS }).map((_, k) => ({
+          x: COL_X0 + k * COL_DX,
+          isHero: r === HERO_ROW && k === HERO_COL,
+          ci: r * COLS + k,
+        })),
+      })),
     [],
   );
 
@@ -144,7 +157,7 @@ export default function MagazineRack({ children }: { children: ReactNode }) {
                 const pos: [number, number, number] =
                   placement === "highlight"
                     ? [0, row.y + 0.05, z + 0.5]
-                    : [c.x, row.y, z + k * 0.012];
+                    : [c.x, row.y, z + k * 0.016];
                 return (
                   <group key={k} position={pos} rotation={[TILT, 0, 0]}>
                     {children}
@@ -160,7 +173,7 @@ export default function MagazineRack({ children }: { children: ReactNode }) {
               return (
                 <mesh
                   key={k}
-                  position={[c.x + jx, row.y + jy, z + k * 0.012 + r(4) * 0.006]}
+                  position={[c.x + jx, row.y + jy, z + k * 0.016 + r(4) * 0.006]}
                   rotation={[TILT, 0, jrz]}
                 >
                   <planeGeometry args={[w, MAG_H]} />
