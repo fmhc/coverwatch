@@ -160,6 +160,7 @@ function ZoomController({ apiRef }: { apiRef: React.MutableRefObject<ZoomApi | n
 
 function Hero() {
   const product = useStore((s) => s.product);
+  const scene = useStore((s) => s.scene);
   const finish = useStore((s) => s.finish);
   const coverId = useStore((s) => s.coverId);
   const covers = useStore((s) => s.covers);
@@ -179,7 +180,7 @@ function Hero() {
       {product === "book" ? (
         <Book tex={tex} height={0.95} />
       ) : (
-        <Magazine tex={tex} height={0.92} />
+        <Magazine tex={tex} height={scene === "rack" ? 0.86 : 0.92} />
       )}
     </group>
   );

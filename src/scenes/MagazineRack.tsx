@@ -9,23 +9,23 @@ const METAL = new THREE.MeshStandardMaterial({
   roughness: 0.45,
   metalness: 0.75,
 });
-const TILT = -0.36; // steeper lean-back, like a real slanted kiosk shelf
-// A real kiosk wall is PACKED: big covers, heavy shingle (you see only the
-// top ~half of most copies), tight columns, almost no shelf showing.
-const ROWS = 6;
-const COLS = 11;
-const ROW_H = 0.42; // << MAG_H → strong vertical overlap
-const COL_DX = 0.42; // < cover width → columns overlap sideways too
-const COL_X0 = -((COLS - 1) * 0.42) / 2;
-const BASE_Y = 0.18;
-const SHELF_Z = -0.45;
+const TILT = -0.34; // slight lean-back, same skew for every copy incl. hero
+// Real kiosk racks are STAIRCASED: each higher row sits higher AND further
+// back, so the row in front only hides the thin bottom edge of the row behind
+// — you see (almost) the whole of every magazine.
+const ROWS = 5;
+const COLS = 10;
 const MAG_H = 0.86;
-const HERO_ROW = 3; // middle-ish → highlighted copy near eye-centre
+const ROW_H = 0.74; // ≈ MAG_H → rows step up by ~a full magazine
+const ROW_DZ = 0.36; // each higher row well behind the one in front
+const COL_DX = 0.56; // covers touch / slightly overlap side to side
+const COL_X0 = -((COLS - 1) * COL_DX) / 2;
+const BASE_Y = 0.3;
+const SHELF_Z = -0.3;
+const HERO_ROW = 2;
 const HERO_COL = 5;
-// Each higher row sits a bit further back so the heavy shingle reads as
-// overlap (front row on top) and never z-fights.
-const zRow = (r: number) => SHELF_Z - r * 0.06;
-const BACK_Z = SHELF_Z - 0.7; // opaque panel, safely behind the deepest row
+const zRow = (r: number) => SHELF_Z - r * ROW_DZ;
+const BACK_Z = SHELF_Z - (ROWS - 1) * ROW_DZ - 0.5;
 
 function headerTexture() {
   // Canvas aspect matches the header box (5.7 × 0.34 ≈ 16.8:1) so the text
@@ -99,51 +99,57 @@ export default function MagazineRack({ children }: { children: ReactNode }) {
         />
       </mesh>
 
-      {/* gondola back panel — safely behind every row */}
-      <mesh position={[0, 1.75, BACK_Z]} receiveShadow>
-        <planeGeometry args={[6.4, 4.6]} />
+      {/* gondola back panel — behind the deepest (top) row */}
+      <mesh position={[0, 2.0, BACK_Z]} receiveShadow>
+        <planeGeometry args={[6.6, 5.0]} />
         <meshStandardMaterial color={"#1a1d22"} roughness={0.9} />
       </mesh>
-      {/* metal side uprights */}
-      {[-2.85, 2.85].map((x, i) => (
-        <mesh key={i} position={[x, 1.75, SHELF_Z - 0.18]} material={METAL}>
-          <boxGeometry args={[0.07, 4.0, 0.5]} />
+      {/* metal side uprights spanning the full staircase */}
+      {[-2.95, 2.95].map((x, i) => (
+        <mesh
+          key={i}
+          position={[x, 2.0, (SHELF_Z + BACK_Z) / 2]}
+          material={METAL}
+        >
+          <boxGeometry args={[0.07, 4.8, Math.abs(BACK_Z - SHELF_Z) + 0.4]} />
         </mesh>
       ))}
 
-      {/* header — sits clearly ABOVE the top row (no longer clips it) */}
+      {/* header — above the top (deepest) row */}
       <mesh
         position={[
           0,
-          BASE_Y + (ROWS - 1) * ROW_H + MAG_H / 2 + 0.24,
-          zRow(ROWS - 1) - 0.03,
+          BASE_Y + (ROWS - 1) * ROW_H + MAG_H * 0.55,
+          zRow(ROWS - 1) - 0.02,
         ]}
+        rotation={[TILT, 0, 0]}
       >
-        <boxGeometry args={[5.7, 0.34, 0.04]} />
+        <boxGeometry args={[5.9, 0.36, 0.04]} />
         <meshStandardMaterial map={useMemo(headerTexture, [])} toneMapped={false} />
       </mesh>
 
-      {/* shelves + shingled magazines (each row stepped back in Z) */}
+      {/* staircased rows: each higher row is up AND back; the front row's
+          shelf+rail only hides the thin bottom edge of the row behind */}
       {rows.map((row) => {
         const z = zRow(row.r);
         return (
           <group key={row.r}>
-            {/* metal shelf */}
+            {/* metal shelf the copies stand on */}
             <mesh
-              position={[0, row.y - MAG_H / 2 - 0.03, z + 0.12]}
+              position={[0, row.y - MAG_H / 2 - 0.04, z + 0.16]}
               rotation={[TILT, 0, 0]}
               material={METAL}
               receiveShadow
             >
-              <boxGeometry args={[5.7, 0.03, 0.46]} />
+              <boxGeometry args={[5.9, 0.04, 0.42]} />
             </mesh>
-            {/* thin metal retainer wire */}
+            {/* retainer rail — the lip the magazines lean on / tuck behind */}
             <mesh
-              position={[0, row.y - MAG_H / 2 + 0.06, z + 0.34]}
+              position={[0, row.y - MAG_H / 2 + 0.07, z + 0.32]}
               rotation={[TILT, 0, 0]}
               material={METAL}
             >
-              <boxGeometry args={[5.7, 0.022, 0.014]} />
+              <boxGeometry args={[5.9, 0.03, 0.016]} />
             </mesh>
 
             {row.cols.map((c, k) => {
@@ -151,15 +157,19 @@ export default function MagazineRack({ children }: { children: ReactNode }) {
                 const v = Math.sin(c.ci * 12.9898 + n * 78.233) * 43758.5453;
                 return v - Math.floor(v);
               };
+              const jx = (r(1) - 0.5) * 0.04;
+              const jy = (r(2) - 0.5) * 0.03;
+              const jrz = (r(3) - 0.5) * 0.05;
+              const pz = z + k * 0.006 + r(4) * 0.005;
               if (c.isHero) {
-                // highlight: pulled forward off the wall + spotlit.
-                // insitu: sits flush in its slot like any other copy.
-                const pos: [number, number, number] =
-                  placement === "highlight"
-                    ? [0, row.y + 0.05, z + 0.5]
-                    : [c.x, row.y, z + k * 0.016];
+                // Same size, slot, skew & jitter as every other copy — only
+                // the spotlight (in highlight mode) sets it apart.
                 return (
-                  <group key={k} position={pos} rotation={[TILT, 0, 0]}>
+                  <group
+                    key={k}
+                    position={[c.x + jx, row.y + jy, pz]}
+                    rotation={[TILT, 0, jrz]}
+                  >
                     {children}
                   </group>
                 );
@@ -167,23 +177,20 @@ export default function MagazineRack({ children }: { children: ReactNode }) {
               const cover = bg[c.ci % Math.max(1, bg.length)];
               if (!cover) return null;
               const w = MAG_H * cover.aspect;
-              const jx = (r(1) - 0.5) * 0.05;
-              const jy = (r(2) - 0.5) * 0.04;
-              const jrz = (r(3) - 0.5) * 0.05;
               return (
                 <mesh
                   key={k}
-                  position={[c.x + jx, row.y + jy, z + k * 0.016 + r(4) * 0.006]}
+                  position={[c.x + jx, row.y + jy, pz]}
                   rotation={[TILT, 0, jrz]}
                 >
                   <planeGeometry args={[w, MAG_H]} />
                   <meshPhysicalMaterial
                     map={cover.tex}
-                    color={placement === "insitu" ? "#c4c4c8" : "#96969c"}
+                    color={placement === "insitu" ? "#cdcdd2" : "#aaaab0"}
                     roughness={0.42 + r(5) * 0.18}
                     clearcoat={0.3}
                     clearcoatRoughness={0.3 + r(6) * 0.2}
-                    envMapIntensity={0.55}
+                    envMapIntensity={0.6}
                   />
                 </mesh>
               );
@@ -207,10 +214,18 @@ export default function MagazineRack({ children }: { children: ReactNode }) {
       />
       {placement === "highlight" && (
         <spotLight
-          position={[0.7, 2.7, 2.7]}
-          target-position={[0, BASE_Y + HERO_ROW * ROW_H, zRow(HERO_ROW) + 0.5]}
-          angle={0.38}
-          penumbra={0.45}
+          position={[
+            COL_X0 + HERO_COL * COL_DX + 0.5,
+            BASE_Y + HERO_ROW * ROW_H + 1.5,
+            zRow(HERO_ROW) + 3.4,
+          ]}
+          target-position={[
+            COL_X0 + HERO_COL * COL_DX,
+            BASE_Y + HERO_ROW * ROW_H,
+            zRow(HERO_ROW),
+          ]}
+          angle={0.32}
+          penumbra={0.5}
           intensity={34}
           color={"#fff2de"}
           castShadow
