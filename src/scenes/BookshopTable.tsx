@@ -17,6 +17,60 @@ const WOOD = new THREE.MeshPhysicalMaterial({
 const SPINE = new THREE.MeshStandardMaterial({ color: "#2a2622", roughness: 0.82 });
 const TABLE_H = 0.95;
 
+function shelfBackdropTexture() {
+  const W = 2048;
+  const H = 900;
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  const x = c.getContext("2d")!;
+  // dim warm wall behind the shelves
+  x.fillStyle = "#1a1410";
+  x.fillRect(0, 0, W, H);
+  // 5 stacked shelves of spines
+  const rows = 5;
+  const rowH = H / rows;
+  for (let r = 0; r < rows; r++) {
+    const y0 = r * rowH + 8;
+    const y1 = (r + 1) * rowH - 14;
+    // shelf board under each row
+    x.fillStyle = "#4a2f1c";
+    x.fillRect(0, y1 + 2, W, 10);
+    x.fillStyle = "rgba(255,220,170,0.06)";
+    x.fillRect(0, y1 + 2, W, 2);
+    // spines along the row, varied widths/colors/heights
+    let xc = 0;
+    while (xc < W) {
+      const w = 22 + Math.random() * 70;
+      const h = y1 - y0 - Math.random() * 18;
+      const hue = Math.floor(Math.random() * 360);
+      const sat = 30 + Math.random() * 35;
+      const lit = 18 + Math.random() * 28;
+      x.fillStyle = `hsl(${hue}, ${sat}%, ${lit}%)`;
+      x.fillRect(xc, y1 - h, w, h);
+      // hair-line title strip
+      if (Math.random() > 0.4) {
+        x.fillStyle = `rgba(255,255,255,${0.04 + Math.random() * 0.08})`;
+        x.fillRect(xc + 2, y1 - h * 0.55, w - 4, 2);
+      }
+      // shadow between spines
+      x.fillStyle = "rgba(0,0,0,0.45)";
+      x.fillRect(xc + w - 1, y1 - h, 1, h);
+      xc += w;
+    }
+  }
+  // global vignette + warm sheen
+  const g = x.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "rgba(0,0,0,0.35)");
+  g.addColorStop(0.5, "rgba(0,0,0,0)");
+  g.addColorStop(1, "rgba(0,0,0,0.5)");
+  x.fillStyle = g;
+  x.fillRect(0, 0, W, H);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 function topperTexture() {
   const c = document.createElement("canvas");
   c.width = 768;
@@ -115,15 +169,16 @@ export default function BookshopTable({ children }: { children: ReactNode }) {
   // (plinth in highlight) sits — that was the interpenetration.
   const stacks = useMemo(
     () =>
-      Array.from({ length: 11 })
+      Array.from({ length: 16 })
         .map((_, i) => ({
           at: [
-            -1.2 + (i % 3) * 1.15 + (Math.random() - 0.5) * 0.22,
-            -0.2 + Math.floor(i / 3) * 0.42 + (Math.random() - 0.5) * 0.14,
+            -1.3 + (i % 4) * 0.88 + (Math.random() - 0.5) * 0.22,
+            -0.25 + Math.floor(i / 4) * 0.38 + (Math.random() - 0.5) * 0.14,
           ] as [number, number],
-          yaw: (Math.random() - 0.5) * 1.0,
-          n: 1 + Math.floor(Math.random() * 5),
+          yaw: (Math.random() - 0.5) * 1.2,
+          n: 1 + Math.floor(Math.random() * 6), // sometimes a tall, messy stack
         }))
+        // keep the front-centre clear so nothing clips the hero plinth
         .filter((s) => !(Math.abs(s.at[0]) < 0.62 && s.at[1] > 0.18)),
     [],
   );
@@ -154,10 +209,19 @@ export default function BookshopTable({ children }: { children: ReactNode }) {
         />
       </mesh>
 
-      {/* blurred shelf wall for depth */}
-      <mesh position={[0, 1.0, -3.4]}>
+      {/* bookshop bookshelves as backdrop (procedural, no DOF needed) */}
+      <mesh position={[0, 1.3, -3.4]}>
+        <planeGeometry args={[18, 4.2]} />
+        <meshStandardMaterial
+          map={useMemo(shelfBackdropTexture, [])}
+          roughness={1}
+          toneMapped={true}
+        />
+      </mesh>
+      {/* surrounding dim warm wall around the bookshelf */}
+      <mesh position={[0, 1.6, -3.5]}>
         <planeGeometry args={[40, 9]} />
-        <meshStandardMaterial color={"#171210"} roughness={1} />
+        <meshStandardMaterial color={"#15110d"} roughness={1} />
       </mesh>
 
       {/* ---- the table ---- */}

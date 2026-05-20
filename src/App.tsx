@@ -29,13 +29,15 @@ type Preset = {
 // genuinely different camera rigs, not one set scaled by a fudge factor.
 const PRESETS_BY_SCENE: Record<SceneId, Preset[]> = {
   bookshop: [
-    { name: "Hero", pos: [0, 0.95, 2.35], tgt: [0, 0.52, 0.15] },
-    { name: "3/4 left", pos: [-1.7, 1.0, 2.05], tgt: [0, 0.5, 0.1] },
-    { name: "3/4 right", pos: [1.7, 1.02, 2.0], tgt: [0, 0.5, 0.1] },
-    { name: "Browsing", pos: [0.55, 1.75, 1.95], tgt: [0, 0.15, -0.1] },
-    { name: "Macro finish", pos: [0.18, 0.78, 1.35], tgt: [0, 0.62, 0.45] },
-    { name: "Flatlay", pos: [0.04, 2.7, 0.85], tgt: [0, 0.05, -0.05] },
-    { name: "Raking light", pos: [-1.95, 0.72, 1.5], tgt: [0, 0.55, 0.2] },
+    // target raised to ~0.7 so the topper sign + standers on the back riser
+    // are always in frame (they were getting clipped at the top)
+    { name: "Hero", pos: [0, 1.1, 2.7], tgt: [0, 0.7, -0.2] },
+    { name: "3/4 left", pos: [-1.9, 1.15, 2.35], tgt: [0, 0.7, -0.2] },
+    { name: "3/4 right", pos: [1.9, 1.17, 2.3], tgt: [0, 0.7, -0.2] },
+    { name: "Browsing", pos: [0.6, 1.95, 2.35], tgt: [0, 0.3, -0.3] },
+    { name: "Macro finish", pos: [0.18, 0.85, 1.45], tgt: [0, 0.62, 0.45] },
+    { name: "Flatlay", pos: [0.04, 2.9, 1.05], tgt: [0, 0.1, -0.2] },
+    { name: "Raking light", pos: [-2.1, 0.85, 1.7], tgt: [0, 0.65, 0.1] },
   ],
   rack: [
     { name: "Hero", pos: [0, 1.5, 5.6], tgt: [0, 1.95, -0.85] },
