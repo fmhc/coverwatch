@@ -186,11 +186,11 @@ export default function MagazineRack({ children }: { children: ReactNode }) {
                   <planeGeometry args={[w, MAG_H]} />
                   <meshPhysicalMaterial
                     map={cover.tex}
-                    color={placement === "insitu" ? "#cdcdd2" : "#aaaab0"}
-                    roughness={0.42 + r(5) * 0.18}
-                    clearcoat={0.3}
-                    clearcoatRoughness={0.3 + r(6) * 0.2}
-                    envMapIntensity={0.6}
+                    color={placement === "highlight" ? "#dfdfe2" : "#ffffff"}
+                    roughness={0.4 + r(5) * 0.18}
+                    clearcoat={0.35}
+                    clearcoatRoughness={0.28 + r(6) * 0.2}
+                    envMapIntensity={0.85}
                   />
                 </mesh>
               );
